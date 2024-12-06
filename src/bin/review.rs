@@ -1,5 +1,6 @@
 use cursive::traits::*;
 use cursive::views::Dialog;
+use cursive::views::TextView;
 use cursive::Cursive;
 use cursive::CursiveExt;
 use futures::executor::block_on;
@@ -27,7 +28,7 @@ async fn main() {
     //     .child(again_btn);
 
     siv.add_fullscreen_layer(
-        Dialog::new()
+        Dialog::around(TextView::new(" ".repeat(200))) // move the title to center
             .title(word)
             .button("Show answer", show_answer_cb)
             .with_name("ocean"), // .content(button_layout)

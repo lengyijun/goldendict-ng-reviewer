@@ -9,9 +9,15 @@ use mdict_cli_rs::fsrs::sqlite_history::SQLiteHistory;
 use mdict_cli_rs::spaced_repetition::SpacedRepetition;
 use rs_fsrs::Rating;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut siv = Cursive::default();
-    siv.set_user_data(SQLiteHistory::default());
+    let mut history = block_on(SQLiteHistory::default());
+    let Ok(word) = block_on(history.next_to_review()) else {
+        println!("no words to review");
+        return;
+    };
+    siv.set_user_data(history);
 
     // Create a linear layout to arrange buttons horizontally at the bottom
     // let button_layout = LinearLayout::horizontal()
@@ -23,7 +29,7 @@ fn main() {
     // Place the buttons at the bottom of the screen
     siv.add_fullscreen_layer(
         Dialog::new()
-            .title("Select Difficulty")
+            .title(word)
             .button("Show answer", |s| {
                 s.add_layer(Dialog::info("Good selected"));
                 s.call_on_name("ocean", |view: &mut Dialog| {

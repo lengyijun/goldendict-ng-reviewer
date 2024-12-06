@@ -6,6 +6,8 @@ use futures::executor::block_on;
 use mdict_cli_rs::fsrs::sqlite_history::SQLiteHistory;
 use mdict_cli_rs::spaced_repetition::SpacedRepetition;
 use rs_fsrs::Rating;
+use std::process::Command;
+use urlencoding::encode;
 
 #[tokio::main]
 async fn main() {
@@ -38,6 +40,10 @@ async fn main() {
 fn show_answer_cb(s: &mut Cursive) {
     s.call_on_name("ocean", |view: &mut Dialog| {
         view.clear_buttons();
+
+        let word = view.get_title().to_owned();
+        let url = format!("goldendict://{}", encode(&word));
+        let _ = Command::new("xdg-open").arg(&url).status();
 
         let word = view.get_title().to_owned();
         view.add_button("Easy", move |s: &mut Cursive| {

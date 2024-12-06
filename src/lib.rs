@@ -1,103 +1,27 @@
 #![feature(async_closure)]
 
-use crate::fsrs::sqlite_history::add_history;
+pub mod anki;
+pub mod fsrs;
+pub mod mdict_wrapper;
+pub mod spaced_repetition;
+pub mod stardict;
+pub mod utils;
+
 use crate::mdict_wrapper::Mdict;
 use crate::stardict::StarDict;
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use chrono::prelude::*;
-use env_logger::Target;
 use log::*;
 use rayon::prelude::*;
-use shadow_rs::shadow;
 use std::ffi::OsStr;
 use std::fs::create_dir;
-use std::fs::OpenOptions;
 use std::path::Path;
 use std::sync::mpsc::channel;
-use std::{
-    env::{self},
-    fs::File,
-    io::Write,
-    path::PathBuf,
-    process::Command,
-};
+use std::{fs::File, io::Write, path::PathBuf};
 use walkdir::WalkDir;
 
-mod anki;
-mod fsrs;
-mod mdict_wrapper;
-mod spaced_repetition;
-mod stardict;
-mod utils;
-
-shadow!(build);
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let word = env::args().nth(1).unwrap();
-    match &*word {
-        "--help" => {
-            println!("https://github.com/lengyijun/mdict-cli-rs/");
-            Ok(())
-        }
-        "--version" => {
-            println!("{}", build::VERSION); //print version const
-            Ok(())
-        }
-        "--list-dict" | "--list-dicts" => {
-            let v = load_dict();
-            if v.is_empty() {
-                println!("no dictionary found in {:?}", dictionary_dir());
-                return Ok(());
-            }
-            for dict in v {
-                println!("{:?}", dict.path());
-            }
-            Ok(())
-        }
-        "--show-path" => {
-            println!("dictionary dir            {:?}", dictionary_dir());
-            println!("history database          {:?}", db_path());
-            println!("log dir                   {:?}", log_dir());
-            Ok(())
-        }
-        "anki" => {
-            let local: DateTime<Local> = Local::now();
-            let log_path = log_dir().join(format!("log.{}", local.to_rfc3339()));
-
-            let log_file = Box::new(
-                OpenOptions::new()
-                    .read(true)
-                    .create(true)
-                    .append(true)
-                    .open(&log_path)?,
-            );
-            println!("log file: {:?}", log_path);
-
-            env_logger::Builder::from_default_env()
-                .target(Target::Pipe(log_file))
-                .filter_level(log::LevelFilter::Info) // Set the minimum log level
-                .init();
-            anki::anki().await?;
-            Ok(())
-        }
-        _ => {
-            env_logger::Builder::from_default_env()
-                .filter_level(log::LevelFilter::Info) // Set the minimum log level
-                .init();
-
-            let temp_dir = tempfile::Builder::new().prefix(&word).tempdir()?;
-            let index_html = query(&word, temp_dir.path())?;
-            add_history(&word).await?;
-            let _ = Command::new("carbonyl").arg(index_html).status()?;
-            Ok(())
-        }
-    }
-}
-
-fn query(word: &str, base_dir: &Path) -> Result<PathBuf> {
+pub fn query(word: &str, base_dir: &Path) -> Result<PathBuf> {
     info!("{word}");
     let (sender, receiver) = channel();
 
@@ -233,7 +157,7 @@ fn query(word: &str, base_dir: &Path) -> Result<PathBuf> {
     Ok(index_html)
 }
 
-fn dictionary_dir() -> PathBuf {
+pub fn dictionary_dir() -> PathBuf {
     let path = dirs::data_local_dir().unwrap().join("mdict-cli-rs");
     if !path.exists() {
         create_dir(&path)
@@ -243,11 +167,11 @@ fn dictionary_dir() -> PathBuf {
     path
 }
 
-fn db_path() -> PathBuf {
+pub fn db_path() -> PathBuf {
     dictionary_dir().join("history.db")
 }
 
-fn log_dir() -> PathBuf {
+pub fn log_dir() -> PathBuf {
     let path = dirs::cache_dir().unwrap().join("mdict-cli-rs");
     if !path.exists() {
         create_dir(&path)
@@ -258,7 +182,7 @@ fn log_dir() -> PathBuf {
 }
 
 // load mdict or stardict
-fn load_dict() -> Vec<Box<dyn T>> {
+pub fn load_dict() -> Vec<Box<dyn T>> {
     let d = dictionary_dir();
 
     let mut v: Vec<Box<dyn T>> = Vec::new();
@@ -292,7 +216,7 @@ fn load_dict() -> Vec<Box<dyn T>> {
     v
 }
 
-trait T: Send {
+pub trait T: Send {
     /// display on button
     fn name(&self) -> &str;
 

@@ -31,6 +31,7 @@ async fn main() {
         Dialog::around(TextView::new(" ".repeat(200))) // move the title to center
             .title(word)
             .button("Show answer", show_answer_cb)
+            .h_align(cursive::align::HAlign::Center)
             .with_name("ocean"), // .content(button_layout)
                                  // .padding(Margins::lrtb(10, 10, 0, 35))
     );

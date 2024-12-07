@@ -80,13 +80,8 @@ fn show_answer_cb(s: &mut Cursive) {
         let _ = Command::new("xdg-open").arg(&url).status();
 
         let word = view.get_title().to_owned();
-        view.add_button("Easy", move |s: &mut Cursive| {
-            update_and_review_next(s, word.clone(), Rating::Easy);
-        });
-
-        let word = view.get_title().to_owned();
-        view.add_button("Good", move |s| {
-            update_and_review_next(s, word.clone(), Rating::Good);
+        view.add_button("Again", move |s| {
+            update_and_review_next(s, word.clone(), Rating::Again);
         });
 
         let word = view.get_title().to_owned();
@@ -95,8 +90,13 @@ fn show_answer_cb(s: &mut Cursive) {
         });
 
         let word = view.get_title().to_owned();
-        view.add_button("Again", move |s| {
-            update_and_review_next(s, word.clone(), Rating::Again);
+        view.add_button("Good", move |s| {
+            update_and_review_next(s, word.clone(), Rating::Good);
+        });
+
+        let word = view.get_title().to_owned();
+        view.add_button("Easy", move |s: &mut Cursive| {
+            update_and_review_next(s, word.clone(), Rating::Easy);
         });
     });
 }

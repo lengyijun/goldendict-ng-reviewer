@@ -1,5 +1,5 @@
 [package]
-name = "mdict-cli-rs"
+name = "goldendict-ng-helper"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
@@ -9,35 +9,15 @@ build = "build.rs"
 [dependencies]
 anyhow = "1.0.91"
 dirs = "5.0.1"
-mdict = "0.1"
-tempfile = "3.13.0"
-walkdir = "2.5.0"
-html_parser = "0.7.0"
-rayon = "1.10.0"
-scraper = "0.18.1"
-ego-tree = "0.6.3"
-flate2 = "1.0.34"
-eio = "0.1.2"
-strsim = "0.11.1"
 rs-fsrs = { version = "1.2.1" , features = ["serde"] }
 chrono = { features = ["clock", "serde"], default-features = false, version = "0.4" }
-serde = { version = "1", features = ["derive"] }
 serde_json = "1.0"
-axum = "0.7.7"
-axum-extra = { version = "0.9.4",  features = ["typed-header"] }
 futures = "0.3"
-headers = "0.4"
 tokio = { version = "1.41", features = ["full"] }
-tokio-stream = "0.1"
-tower-http = { version = "0.6.1", features = ["fs", "trace"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 sqlx = { version = "0.8", features = [ "runtime-tokio", "sqlite" ] }
-shadow-rs = "0"
-env_logger = "0.11.5"
-log = "0.4.22"
-crossbeam-channel = "0.5.13"
 cursive = "0.21.1"
 urlencoding = "2.1.3"
+shadow-rs = "0"
 
 [build-dependencies]
 shadow-rs = "0"

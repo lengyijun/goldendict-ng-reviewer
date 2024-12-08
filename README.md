@@ -1,39 +1,88 @@
-# mdict-cli-rs
+# goldendict-helper
 
-## Features
-1. support stardict and mdict
-2. anki mode
+[Goldendict-ng](https://github.com/xiaoyifang/goldendict-ng) doesn't have an inherient review system(what a pitty).
 
-## Get start
-1. put the mdict or stardict under `~/.local/share/mdict-cli-rs` 
+Usally we use goldendict-ng with anki : https://xiaoyifang.github.io/goldendict-ng/topic_anki/
 
-    `mdict-cli-rs` will search dictionaries recursively
+This approach depends on anki-connect: we have to always open anki, which is quite annoying.
 
-    mdict only support v1,v2
+So we made this project to replace anki
 
-2. install [carbonyl](https://github.com/fathyb/carbonyl)
-3. `cargo r -- awesome`
+![Alt Text](assets/output.gif)
 
-### Search
-[![asciicast](https://asciinema.org/a/684675.svg)](https://asciinema.org/a/684675)
 
-### Review
-[![asciicast](https://asciinema.org/a/687030.svg)](https://asciinema.org/a/687030)
+- pros
+    - 避免了 anki 中的 bug
+        - https://github.com/xiaoyifang/goldendict-ng/discussions/1885
+    - 不用打开 anki-connect
+        - 相当于 headless anki
+    - 比 anki 少点一次鼠标
+    - Customize review strategy
+        - For example, similar words first, verb first ...
 
-## Usage
+- cons
+    - 复习计划制定的不如 anki
+    - theme 不够好看
+    - only work on [awesomewm](https://awesomewm.org/)
+        - Possible to extend to other window manager
+
+## Install
 
 ```
-# search word
-mdict-cli-rs <word>
-
-# anki-like review mode
-# you can also open http://127.0.0.1:3333 in browser manually
-mdict-cli-rs anki
-
-mdict-cli-rs --list-dicts
-mdict-cli-rs --show-path
+cargo install --path .
 ```
 
-### blog in Chinese
+Setup `add_word %GDWORD%` to goldendict-ng's program dictionary: 
+`add_word` will insert every word to sqlite
 
-https://rustcc.cn/article?id=f1875505-af4e-4043-ba92-f95a2e7e01a1
+
+## How to review
+
+1. Start goldendict-ng
+
+
+2. `~/.config/awesome/rc.lua`
+```
+{
+    rule = { instance = "goldendict"},
+    properties = {
+        width = 1900,
+        height = 800,
+        floating = true,
+        titlebars_enabled = false,
+        requests_no_titlebar = true,
+        x = 10,
+        y = 200,
+        focus = false,
+        border_width = 0,
+        ontop = true,
+    }
+}
+```
+
+3. `review`
+
+
+## Note
+
+1. Use this `goldendict_wrapper` to fix history
+
+```
+#!/usr/bin/env bash
+
+sqlite3 ~/.local/share/goldendict/history.db 'SELECT word FROM fsrs ORDER BY rowid DESC' | awk  '{print "0 " $0}' > ~/.local/share/goldendict/history
+goldendict
+sqlite3 ~/.local/share/goldendict/history.db 'SELECT word FROM fsrs ORDER BY rowid DESC' | awk  '{print "0 " $0}' > ~/.local/share/goldendict/history
+```
+
+## Q&A
+
+#### Why not anki
+
+anki-connect require anki window open: quite annoying
+
+
+#### Can we use on other desktop envrionment ?
+
+As long as the desktop manager support configuration of goldendict-ng's position, height and width
+

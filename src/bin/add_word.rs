@@ -1,5 +1,5 @@
 use anyhow::Result;
-use mdict_cli_rs::fsrs::sqlite_history::add_history;
+use goldendict_ng_helper::fsrs::sqlite_history::add_history;
 use std::env::args;
 
 #[tokio::main]
@@ -8,7 +8,7 @@ async fn main() -> Result<()> {
     if w == "--help" {
         println!("used in goldendict-ng, program dic");
         println!("add first argument to sqlite");
-        println!("https://github.com/lengyijun/mdict-cli-rs/tree/cursive");
+        println!("https://github.com/lengyijun/goldendict-ng-helper");
         return Ok(());
     }
     add_history(&w).await?;

@@ -175,6 +175,26 @@ COMMIT;
 
         Ok(true)
     }
+
+    pub async fn insert_or_replace(&mut self, word: &str, card: Card) -> Result<()> {
+        // ignore SQLITE_CONSTRAINT_UNIQUE
+
+        let _sqlite_query_result = sqlx::query("INSERT OR REPLACE INTO fsrs (session_id, word, due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING rowid;")
+        .bind(self.session_id)
+        .bind(word)
+        .bind(serde_json::to_string(&card.due)?)
+        .bind(card.stability)
+        .bind(card.difficulty)
+        .bind(card.elapsed_days)
+        .bind(card.scheduled_days)
+        .bind(card.reps)
+        .bind(card.lapses)
+        .bind(serde_json::to_string(&card.state)?)
+        .bind(serde_json::to_string(&card.last_review)?)
+        .execute(&self.conn).await?;
+
+        Ok(())
+    }
 }
 
 async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {

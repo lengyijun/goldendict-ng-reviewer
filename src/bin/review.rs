@@ -5,14 +5,24 @@ use cursive::views::TextView;
 use cursive::Cursive;
 use cursive::CursiveExt;
 use futures::executor::block_on;
-use mdict_cli_rs::fsrs::sqlite_history::SQLiteHistory;
-use mdict_cli_rs::spaced_repetition::SpacedRepetition;
+use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
+use goldendict_ng_helper::spaced_repetition::SpacedRepetition;
 use rs_fsrs::Rating;
+use shadow_rs::shadow;
 use std::process::Command;
 use urlencoding::encode;
 
+shadow!(build);
+
 #[tokio::main]
 async fn main() {
+    if std::env::args().nth(1).as_deref() == Some("--help") {
+        println!("used with goldendict-ng");
+        println!("https://github.com/lengyijun/goldendict-ng-helper");
+        println!("{}", build::VERSION); //print version const
+        return;
+    }
+
     let mut siv = Cursive::default();
     let mut history = SQLiteHistory::default().await;
     let Ok(word) = history.next_to_review().await else {

@@ -90,30 +90,37 @@ fn show_answer_cb(s: &mut Cursive) {
         let word_4 = word;
 
         let buttons_layout = LinearLayout::horizontal()
+            .child(Button::new("Skip", move |s| {
+                review_next(s);
+            }))
             .child(TextView::new(" ".repeat(100)))
             .child(Button::new("Again", move |s| {
-                update_and_review_next(s, word_1.clone(), Rating::Again);
+                update_and_review_next(s, &word_1, Rating::Again);
             }))
+            .child(TextView::new(" "))
             .child(Button::new("Hard", move |s| {
-                update_and_review_next(s, word_2.clone(), Rating::Hard);
+                update_and_review_next(s, &word_2, Rating::Hard);
             }))
+            .child(TextView::new(" "))
             .child(Button::new("Good", move |s| {
-                update_and_review_next(s, word_3.clone(), Rating::Good);
+                update_and_review_next(s, &word_3, Rating::Good);
             }))
+            .child(TextView::new(" "))
             .child(Button::new("Easy", move |s| {
-                update_and_review_next(s, word_4.clone(), Rating::Easy);
+                update_and_review_next(s, &word_4, Rating::Easy);
             }))
-            .child(TextView::new(" ".repeat(100)));
+            .child(TextView::new(" ".repeat(91)))
+            .child(Button::new("Quit", |s| {
+                s.quit();
+            }));
 
         view.set_content(buttons_layout);
     });
 }
 
-fn update_and_review_next(s: &mut Cursive, word: String, rating: Rating) {
-    let next_word = s.with_user_data(|history: &mut SQLiteHistory| {
-        let _ = block_on(history.update(&word, rating));
-        block_on(history.next_to_review())
-    });
+fn review_next(s: &mut Cursive) {
+    let next_word =
+        s.with_user_data(|history: &mut SQLiteHistory| block_on(history.next_to_review()));
     match next_word {
         Some(Ok(next_word)) => {
             s.call_on_name(OCEAN, |view: &mut Dialog| {
@@ -127,9 +134,22 @@ fn update_and_review_next(s: &mut Cursive, word: String, rating: Rating) {
     }
 }
 
+fn update_and_review_next(s: &mut Cursive, word: &str, rating: Rating) {
+    s.with_user_data(|history: &mut SQLiteHistory| {
+        let _ = block_on(history.update(word, rating));
+    });
+    review_next(s);
+}
+
 fn show_answer_layout() -> LinearLayout {
     LinearLayout::horizontal()
+        .child(Button::new("Skip", move |s| {
+            review_next(s);
+        }))
         .child(TextView::new(" ".repeat(100)))
         .child(Button::new("Show answer", show_answer_cb))
         .child(TextView::new(" ".repeat(100)))
+        .child(Button::new("Quit", |s| {
+            s.quit();
+        }))
 }

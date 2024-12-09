@@ -1,6 +1,8 @@
 use cursive::style::{BorderStyle, Palette};
 use cursive::traits::*;
+use cursive::views::Button;
 use cursive::views::Dialog;
+use cursive::views::LinearLayout;
 use cursive::views::TextView;
 use cursive::Cursive;
 use cursive::CursiveExt;
@@ -13,6 +15,8 @@ use std::process::Command;
 use urlencoding::encode;
 
 shadow!(build);
+
+static OCEAN: &str = "ocean";
 
 #[tokio::main]
 async fn main() {
@@ -62,52 +66,46 @@ async fn main() {
         }),
     });
 
-    // Create a linear layout to arrange buttons horizontally at the bottom
-    // let button_layout = LinearLayout::horizontal()
-    //     .child(easy_btn)
-    //     .child(good_btn)
-    //     .child(hard_btn)
-    //     .child(again_btn);
-
     siv.add_fullscreen_layer(
         Dialog::around(TextView::new(" ".repeat(200))) // move the title to center
             .title(word)
-            .button("Show answer", show_answer_cb)
+            .content(show_answer_layout())
             .h_align(cursive::align::HAlign::Center)
-            .with_name("ocean"), // .content(button_layout)
-                                 // .padding(Margins::lrtb(10, 10, 0, 35))
+            .with_name(OCEAN),
+        // .padding(Margins::lrtb(10, 10, 0, 35))
     );
 
     siv.run();
 }
 
 fn show_answer_cb(s: &mut Cursive) {
-    s.call_on_name("ocean", |view: &mut Dialog| {
-        view.clear_buttons();
-
+    s.call_on_name(OCEAN, |view: &mut Dialog| {
         let word = view.get_title().to_owned();
         let url = format!("goldendict://{}", encode(&word));
         let _ = Command::new("xdg-open").arg(&url).status();
 
-        let word = view.get_title().to_owned();
-        view.add_button("Again", move |s| {
-            update_and_review_next(s, word.clone(), Rating::Again);
-        });
+        let word_1 = word.clone();
+        let word_2 = word.clone();
+        let word_3 = word.clone();
+        let word_4 = word;
 
-        let word = view.get_title().to_owned();
-        view.add_button("Hard", move |s| {
-            update_and_review_next(s, word.clone(), Rating::Hard);
-        });
+        let buttons_layout = LinearLayout::horizontal()
+            .child(TextView::new(" ".repeat(100)))
+            .child(Button::new("Again", move |s| {
+                update_and_review_next(s, word_1.clone(), Rating::Again);
+            }))
+            .child(Button::new("Hard", move |s| {
+                update_and_review_next(s, word_2.clone(), Rating::Hard);
+            }))
+            .child(Button::new("Good", move |s| {
+                update_and_review_next(s, word_3.clone(), Rating::Good);
+            }))
+            .child(Button::new("Easy", move |s| {
+                update_and_review_next(s, word_4.clone(), Rating::Easy);
+            }))
+            .child(TextView::new(" ".repeat(100)));
 
-        let word = view.get_title().to_owned();
-        view.add_button("Good", move |s| {
-            update_and_review_next(s, word.clone(), Rating::Good);
-        });
-
-        let word = view.get_title().to_owned();
-        view.add_button("Easy", move |s: &mut Cursive| {
-            update_and_review_next(s, word.clone(), Rating::Easy);
-        });
+        view.set_content(buttons_layout);
     });
 }
 
@@ -118,14 +116,20 @@ fn update_and_review_next(s: &mut Cursive, word: String, rating: Rating) {
     });
     match next_word {
         Some(Ok(next_word)) => {
-            s.call_on_name("ocean", |view: &mut Dialog| {
+            s.call_on_name(OCEAN, |view: &mut Dialog| {
                 view.set_title(next_word);
-                view.clear_buttons();
-                view.add_button("Show answer", show_answer_cb);
+                view.set_content(show_answer_layout());
             });
         }
         _ => {
             s.quit();
         }
     }
+}
+
+fn show_answer_layout() -> LinearLayout {
+    LinearLayout::horizontal()
+        .child(TextView::new(" ".repeat(100)))
+        .child(Button::new("Show answer", show_answer_cb))
+        .child(TextView::new(" ".repeat(100)))
 }

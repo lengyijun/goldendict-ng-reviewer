@@ -109,7 +109,14 @@ fn show_answer_cb(s: &mut Cursive) {
             .child(Button::new("Easy", move |s| {
                 update_and_review_next(s, &word_4, Rating::Easy);
             }))
-            .child(TextView::new(" ".repeat(91)))
+            .child(TextView::new(" ".repeat(80)))
+            .child(Button::new("Delete", move |s| {
+                let word = s.call_on_name(OCEAN, |view: &mut Dialog| view.get_title().to_owned());
+                if let Some(word) = word {
+                    s.with_user_data(|history: &mut SQLiteHistory| block_on(history.delete(&word)));
+                    review_next(s);
+                }
+            }))
             .child(Button::new("Quit", |s| {
                 s.quit();
             }));

@@ -6,4 +6,6 @@ pub trait SpacedRepetition: Sized {
     async fn next_to_review(&mut self) -> Result<String>;
 
     async fn update(&self, question: &str, rating: Rating) -> Result<()>;
+
+    async fn delete(&self, question: &str) -> Result<()>;
 }

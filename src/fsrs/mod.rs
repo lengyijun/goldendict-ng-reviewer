@@ -46,15 +46,12 @@ impl SpacedRepetition for sqlite_history::SQLiteHistory {
                 }
     }
 
-    async fn update(&self, question: &str, rating: Rating) -> Result<()> {
+    async fn update(&mut self, question: &str, rating: Rating) -> Result<()> {
         let old_card = get_word(&self.conn, question)
             .await
             .context("get old card fail")?;
         let scheduling_info = self.fsrs.next(old_card, Utc::now(), rating);
-        update(&self.conn, question, scheduling_info.card)
-            .await
-            .context("update fail")?;
-        Ok(())
+        self.insert_or_replace(question, scheduling_info.card).await
     }
 
     async fn delete(&self, question: &str) -> Result<()> {
@@ -64,23 +61,6 @@ impl SpacedRepetition for sqlite_history::SQLiteHistory {
             .await?;
         Ok(())
     }
-}
-
-async fn update(pool: &SqlitePool, word: &str, card: Card) -> Result<()> {
-    sqlx::query("UPDATE fsrs SET due = $2, stability = $3, difficulty = $4, elapsed_days = $5, scheduled_days = $6, reps = $7, lapses = $8, state = $9, last_review = $10 WHERE word = $1")
-        .bind(word)
-        .bind(serde_json::to_string(&card.due)?)
-        .bind(card.stability)
-        .bind(card.difficulty)
-        .bind(card.elapsed_days)
-        .bind(card.scheduled_days)
-        .bind(card.reps)
-        .bind(card.lapses)
-        .bind(serde_json::to_string(&card.state)?)
-        .bind(serde_json::to_string(&card.last_review)?)
-        .execute(pool)
-        .await?;
-    Ok(())
 }
 
 async fn get_word(pool: &SqlitePool, word: &str) -> Result<Card> {

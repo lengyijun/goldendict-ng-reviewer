@@ -16,7 +16,7 @@ pub fn rating_from_u8(q: u8) -> Rating {
 
 pub fn groom_name(folder_name: &str) -> String {
     // remove ' in folder_name
-    folder_name.replace(|c| c == '\'', "")
+    folder_name.replace('\'', "")
 }
 
 pub fn create_sub_dir(base_dir: &Path, prefer_name: &str) -> Result<PathBuf> {

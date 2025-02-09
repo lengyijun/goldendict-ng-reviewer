@@ -1,15 +1,19 @@
 //! <https://github.com/kkawakam/rustyline/blob/master/src/sqlite_history.rs>
 //! History impl. based on SQLite
+
 use crate::db_path;
 use anyhow::Result;
 use rs_fsrs::Card;
 use rs_fsrs::Parameters;
 use rs_fsrs::FSRS;
 use sqlx::migrate::MigrateDatabase;
+use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::sqlite::SqlitePool;
+use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::Row;
 use sqlx::Sqlite;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 /// 只在 非交互式的 情况下使用
 pub async fn add_history(word: &str) -> Result<()> {
@@ -198,5 +202,6 @@ COMMIT;
 }
 
 async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {
-    SqlitePool::connect(path.to_str().unwrap()).await
+    let options = SqliteConnectOptions::from_str(path.to_str().unwrap())?.with_regexp();
+    Ok(SqlitePoolOptions::new().connect_with(options).await?)
 }

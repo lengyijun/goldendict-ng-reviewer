@@ -63,7 +63,7 @@ impl SpacedRepetition for sqlite_history::SQLiteHistory {
     }
 }
 
-async fn get_word(pool: &SqlitePool, word: &str) -> Result<Card> {
+pub async fn get_word(pool: &SqlitePool, word: &str) -> Result<Card> {
     let sqlite_row = sqlx::query("SELECT due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review
     FROM fsrs WHERE word = $1")
         .bind(word)

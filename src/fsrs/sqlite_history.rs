@@ -15,13 +15,6 @@ use sqlx::Sqlite;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-/// 只在 非交互式的 情况下使用
-pub async fn add_history(word: &str) -> Result<()> {
-    let mut d = crate::fsrs::sqlite_history::SQLiteHistory::default().await;
-    d.insert_or_ignore(word).await?;
-    Ok(())
-}
-
 /// History stored in an SQLite database.
 #[derive(Clone)]
 pub struct SQLiteHistory {
@@ -158,28 +151,6 @@ COMMIT;
         Ok(())
     }
 
-    async fn insert_or_ignore(&mut self, word: &str) -> Result<bool> {
-        let card = Card::new();
-
-        // ignore SQLITE_CONSTRAINT_UNIQUE
-
-        let _sqlite_query_result = sqlx::query("INSERT OR IGNORE INTO fsrs (session_id, word, due, stability, difficulty, elapsed_days, scheduled_days, reps, lapses, state, last_review) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING rowid;")
-        .bind(self.session_id)
-        .bind(word)
-        .bind(serde_json::to_string(&card.due)?)
-        .bind(card.stability)
-        .bind(card.difficulty)
-        .bind(card.elapsed_days)
-        .bind(card.scheduled_days)
-        .bind(card.reps)
-        .bind(card.lapses)
-        .bind(serde_json::to_string(&card.state)?)
-        .bind(serde_json::to_string(&card.last_review)?)
-        .execute(&self.conn).await?;
-
-        Ok(true)
-    }
-
     pub async fn insert_or_replace(&mut self, word: &str, card: Card) -> Result<()> {
         // ignore SQLITE_CONSTRAINT_UNIQUE
 
@@ -201,7 +172,7 @@ COMMIT;
     }
 }
 
-async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {
+pub async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())?.with_regexp();
     Ok(SqlitePoolOptions::new().connect_with(options).await?)
 }

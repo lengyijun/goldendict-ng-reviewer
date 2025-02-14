@@ -1,5 +1,6 @@
 use anyhow::Result;
-use goldendict_ng_helper::fsrs::sqlite_history::add_history;
+use goldendict_ng_helper::fsrs::{get_word, sqlite_history::SQLiteHistory};
+use rs_fsrs::Card;
 use std::env::args;
 
 #[tokio::main]
@@ -11,6 +12,10 @@ async fn main() -> Result<()> {
         println!("https://github.com/lengyijun/goldendict-ng-helper");
         return Ok(());
     }
-    add_history(&w).await?;
+    let mut sqlite_history = SQLiteHistory::default().await;
+    let card = get_word(&sqlite_history.conn, &w)
+        .await
+        .unwrap_or(Card::new());
+    sqlite_history.insert_or_replace(&w, card).await?;
     Ok(())
 }

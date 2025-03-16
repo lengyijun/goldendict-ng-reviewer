@@ -1,5 +1,4 @@
 pub mod fsrs;
-pub mod spaced_repetition;
 pub mod utils;
 
 use anyhow::Context;

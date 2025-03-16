@@ -2,7 +2,6 @@ use anyhow::anyhow;
 use anyhow::Result;
 use clap::Parser;
 use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
-use goldendict_ng_helper::spaced_repetition::SpacedRepetition;
 use shadow_rs::shadow;
 use sqlx::sqlite::SqlitePool;
 use sqlx::Row;

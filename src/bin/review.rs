@@ -8,7 +8,6 @@ use cursive::Cursive;
 use cursive::CursiveExt;
 use futures::executor::block_on;
 use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
-use goldendict_ng_helper::spaced_repetition::SpacedRepetition;
 use rs_fsrs::Rating;
 use shadow_rs::shadow;
 use std::process::Command;

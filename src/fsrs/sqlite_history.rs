@@ -2,9 +2,12 @@
 //! History impl. based on SQLite
 
 use crate::db_path;
+use anyhow::Context;
 use anyhow::Result;
+use chrono::Utc;
 use rs_fsrs::Card;
 use rs_fsrs::Parameters;
+use rs_fsrs::Rating;
 use rs_fsrs::FSRS;
 use sqlx::migrate::MigrateDatabase;
 use sqlx::sqlite::SqliteConnectOptions;
@@ -14,6 +17,8 @@ use sqlx::Row;
 use sqlx::Sqlite;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+
+use super::get_word;
 
 /// History stored in an SQLite database.
 #[derive(Clone)]
@@ -170,6 +175,51 @@ COMMIT;
         .bind(serde_json::to_string(&card.last_review)?)
         .execute(&self.conn).await?;
 
+        Ok(())
+    }
+
+    pub async fn next_to_review(&mut self) -> Result<String> {
+        let word: String = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id != $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
+                .bind(self.session_id)
+                .bind(self.row_id)
+                .fetch_one(&self.conn)
+                .await {
+                    Ok(row) => {
+                        self.row_id = row.get(0);
+                        row.get(1)
+                    }
+                    Err(_) => {
+                        // search from start
+                        let row = sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id != $1 ORDER BY RANDOM() LIMIT 1;")
+                            .bind(self.session_id)
+                            .fetch_one(&self.conn)
+                            .await?;
+                        self.row_id = row.get(0);
+                        row.get(1)
+                    }
+                };
+        sqlx::query("UPDATE fsrs SET session_id = $2 WHERE word = $1")
+            .bind(&word)
+            .bind(self.session_id)
+            .execute(&self.conn)
+            .await?;
+        self.history.push(word.clone());
+        Ok(word)
+    }
+
+    pub async fn update(&mut self, question: &str, rating: Rating) -> Result<()> {
+        let old_card = get_word(&self.conn, question)
+            .await
+            .context("get old card fail")?;
+        let scheduling_info = self.fsrs.next(old_card, Utc::now(), rating);
+        self.insert_or_replace(question, scheduling_info.card).await
+    }
+
+    pub async fn delete(&self, question: &str) -> Result<()> {
+        sqlx::query("DELETE FROM fsrs WHERE word = $1")
+            .bind(question)
+            .execute(&self.conn)
+            .await?;
         Ok(())
     }
 }

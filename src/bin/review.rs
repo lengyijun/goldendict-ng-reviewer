@@ -76,6 +76,9 @@ async fn main() {
     );
 
     siv.run();
+
+    let history: SQLiteHistory = siv.take_user_data().unwrap();
+    println!("{:?}", history.history);
 }
 
 fn show_answer_cb(s: &mut Cursive) {

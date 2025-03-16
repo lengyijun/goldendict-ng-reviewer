@@ -28,6 +28,7 @@ pub struct SQLiteHistory {
     /// search next word to review from `row_id`
     pub row_id: i32,
     pub fsrs: FSRS,
+    pub history: Vec<String>,
 }
 
 /*
@@ -58,6 +59,7 @@ impl SQLiteHistory {
             session_id: 0,
             row_id: -1,
             fsrs: FSRS::new(Parameters::default()),
+            history: Vec::new(),
         };
         sh.check_schema().await?;
         sh.create_session().await?;

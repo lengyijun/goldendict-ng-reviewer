@@ -15,6 +15,7 @@ use sqlx::sqlite::SqlitePool;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::Row;
 use sqlx::Sqlite;
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -34,6 +35,7 @@ pub struct SQLiteHistory {
     pub row_id: i32,
     pub fsrs: FSRS,
     pub history: Vec<String>,
+    pub queue: VecDeque<String>,
 }
 
 /*
@@ -65,6 +67,7 @@ impl SQLiteHistory {
             row_id: -1,
             fsrs: FSRS::new(Parameters::default()),
             history: Vec::new(),
+            queue: VecDeque::new(),
         };
         sh.check_schema().await?;
         sh.create_session().await?;
@@ -178,7 +181,22 @@ COMMIT;
         Ok(())
     }
 
-    pub async fn next_to_review(&mut self) -> Result<String> {
+    async fn leven(&mut self, word: &str) -> Result<()> {
+        let similar_words =
+            sqlx::query("SELECT word FROM fsrs where word != $1 AND session_id != $2;")
+                .bind(word)
+                .bind(&self.session_id)
+                .fetch_all(&self.conn)
+                .await?
+                .into_iter()
+                .map(|sqlite_row| sqlite_row.get(0))
+                .filter(|a: &String| strsim::levenshtein(a, word) <= 2);
+
+        self.queue.extend(similar_words);
+        Ok(())
+    }
+
+    async fn next_to_review_db(&mut self) -> Result<String> {
         let word: String = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id != $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
                 .bind(self.session_id)
                 .bind(self.row_id)
@@ -203,7 +221,22 @@ COMMIT;
             .bind(self.session_id)
             .execute(&self.conn)
             .await?;
+        Ok(word)
+    }
+
+    async fn next_to_review_inner(&mut self) -> Result<String> {
+        while let Some(word) = self.queue.pop_front() {
+            if !self.history.contains(&word) {
+                return Ok(word);
+            }
+        }
+        self.next_to_review_db().await
+    }
+
+    pub async fn next_to_review(&mut self) -> Result<String> {
+        let word = self.next_to_review_inner().await?;
         self.history.push(word.clone());
+        let _ = self.leven(&word).await;
         Ok(word)
     }
 

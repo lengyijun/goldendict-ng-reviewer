@@ -872,6 +872,7 @@ dependencies = [
  "serde_json",
  "shadow-rs",
  "sqlx",
+ "strsim",
  "tokio",
  "urlencoding",
  "walkdir",

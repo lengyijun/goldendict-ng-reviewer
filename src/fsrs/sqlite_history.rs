@@ -197,7 +197,7 @@ COMMIT;
     }
 
     async fn next_to_review_db(&mut self) -> Result<String> {
-        let word: String = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id != $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
+        let word: String = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
                 .bind(self.session_id)
                 .bind(self.row_id)
                 .fetch_one(&self.conn)
@@ -208,7 +208,7 @@ COMMIT;
                     }
                     Err(_) => {
                         // search from start
-                        let row = sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id != $1 ORDER BY RANDOM() LIMIT 1;")
+                        let row = sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 ORDER BY RANDOM() LIMIT 1;")
                             .bind(self.session_id)
                             .fetch_one(&self.conn)
                             .await?;

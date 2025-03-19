@@ -19,7 +19,7 @@ use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use super::get_word;
+use super::get_card;
 
 /// History stored in an SQLite database.
 #[derive(Clone)]
@@ -241,7 +241,7 @@ COMMIT;
     }
 
     pub async fn update(&mut self, question: &str, rating: Rating) -> Result<()> {
-        let old_card = get_word(&self.conn, question)
+        let old_card = get_card(&self.conn, question)
             .await
             .context("get old card fail")?;
         let scheduling_info = self.fsrs.next(old_card, Utc::now(), rating);

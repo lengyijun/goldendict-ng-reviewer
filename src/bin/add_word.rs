@@ -1,5 +1,5 @@
 use anyhow::Result;
-use goldendict_ng_helper::fsrs::{get_word, sqlite_history::SQLiteHistory};
+use goldendict_ng_helper::fsrs::{get_card, sqlite_history::SQLiteHistory};
 use rs_fsrs::Card;
 use std::env::args;
 
@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
     }
     let mut sqlite_history = SQLiteHistory::default().await;
     for w in args().skip(1) {
-        let card = get_word(&sqlite_history.conn, &w)
+        let card = get_card(&sqlite_history.conn, &w)
             .await
             .unwrap_or(Card::new());
         sqlite_history.insert_or_replace(&w, card).await?;

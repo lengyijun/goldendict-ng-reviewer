@@ -25,3 +25,13 @@ pub async fn get_card(pool: &SqlitePool, word: &str) -> Result<Card> {
     };
     Ok(card)
 }
+
+pub async fn get_word_ignore_case(pool: &SqlitePool, word: &str) -> Result<String> {
+    let sqlite_row = sqlx::query("SELECT word FROM fsrs WHERE word = $1 COLLATE NOCASE LIMIT 1")
+        .bind(word)
+        .fetch_one(pool)
+        .await?;
+
+    let res = sqlite_row.get(0);
+    Ok(res)
+}

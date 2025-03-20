@@ -7,7 +7,12 @@ use cursive::views::TextView;
 use cursive::Cursive;
 use cursive::CursiveExt;
 use futures::executor::block_on;
+use goldendict_ng_helper::favorite::{
+    extract_all_words_from_favorites, extract_words_from_favorites_folder,
+};
 use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
+use rand::prelude::SliceRandom;
+use rand::rng;
 use rs_fsrs::Rating;
 use shadow_rs::shadow;
 use std::process::Command;
@@ -19,19 +24,53 @@ static OCEAN: &str = "ocean";
 
 #[tokio::main]
 async fn main() {
-    if std::env::args().nth(1).as_deref() == Some("--help") {
-        println!("used with goldendict-ng");
-        println!("https://github.com/lengyijun/goldendict-ng-helper");
-        println!("{}", build::VERSION); //print version const
-        return;
+    let mut history = SQLiteHistory::default().await;
+
+    match std::env::args().nth(1).as_deref() {
+        Some("--help") => {
+            println!("used with goldendict-ng");
+            println!("https://github.com/lengyijun/goldendict-ng-helper");
+            println!("{}", build::VERSION); //print version const
+            return;
+        }
+        Some("favourite") => {
+            let favorite_words = extract_all_words_from_favorites().unwrap();
+            let mut v = Vec::new();
+            for word in favorite_words.into_iter() {
+                if history.should_review(&word).await.is_ok() {
+                    v.push(word);
+                }
+            }
+            if v.is_empty() {
+                println!("no words to review in favourite");
+                return;
+            }
+            v.shuffle(&mut rng());
+            history.queue.extend(v);
+        }
+        Some(folder_name) => {
+            let favorite_words = extract_words_from_favorites_folder(folder_name).unwrap();
+            let mut v = Vec::new();
+            for word in favorite_words.into_iter() {
+                if history.should_review(&word).await.is_ok() {
+                    v.push(word);
+                }
+            }
+            if v.is_empty() {
+                println!("no words to review in folder {folder_name}");
+                return;
+            }
+            v.shuffle(&mut rng());
+            history.queue.extend(v);
+        }
+        None => {}
     }
 
-    let mut siv = Cursive::default();
-    let mut history = SQLiteHistory::default().await;
     let Ok(word) = history.next_to_review().await else {
         println!("no words to review");
         return;
     };
+    let mut siv = Cursive::default();
     siv.set_user_data(history);
 
     // Start with a nicer theme than default

@@ -21,6 +21,9 @@ shadow-rs = "0"
 walkdir = "2"
 clap = { version = "4", features = ["derive"] }
 strsim = "^0"
+roxmltree = "0.20.0"
+rand = "0.9.0"
+itertools = "0"
 
 [build-dependencies]
 shadow-rs = "0"

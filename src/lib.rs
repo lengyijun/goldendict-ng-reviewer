@@ -1,3 +1,4 @@
+pub mod favorite;
 pub mod fsrs;
 pub mod utils;
 
@@ -28,4 +29,11 @@ pub fn log_dir() -> PathBuf {
             .unwrap();
     }
     path
+}
+
+pub fn favourites_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap()
+        .join("goldendict")
+        .join("favorites")
 }

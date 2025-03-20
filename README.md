@@ -29,7 +29,9 @@ So we made this project to replace anki
 ## Install
 
 ```
-cargo install --path .
+git clone https://github.com/lengyijun/goldendict-ng-reviewer
+cd goldendict-ng-reviewer
+make install
 ```
 
 Setup `add_word %GDWORD%` to goldendict-ng's program dictionary: 

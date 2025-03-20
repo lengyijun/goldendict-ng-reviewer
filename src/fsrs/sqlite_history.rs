@@ -255,6 +255,16 @@ COMMIT;
             .await?;
         Ok(())
     }
+
+    // return Ok(()): should review
+    // return Err(_): not exists in history or should not review
+    pub async fn should_review(&self, question: &str) -> Result<()> {
+        let _row = sqlx::query("SELECT word FROM fsrs WHERE word = $1 AND timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' LIMIT 1;")
+                            .bind(question)
+                            .fetch_one(&self.conn)
+                            .await?;
+        Ok(())
+    }
 }
 
 pub async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {

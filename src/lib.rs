@@ -1,3 +1,4 @@
+pub mod favorite;
 pub mod fsrs;
 pub mod utils;
 

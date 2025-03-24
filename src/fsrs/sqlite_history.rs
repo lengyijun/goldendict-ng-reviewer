@@ -265,6 +265,16 @@ COMMIT;
                             .await?;
         Ok(())
     }
+
+    pub async fn phrase(&self) -> Result<Vec<String>> {
+        let phrases: Vec<String> = sqlx::query("SELECT word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND word LIKE '% %' ORDER BY RANDOM();")
+                .fetch_all(&self.conn)
+                .await?
+                .into_iter()
+                .map(|sqlite_row| sqlite_row.get(0))
+                .collect();
+        Ok(phrases)
+    }
 }
 
 pub async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {

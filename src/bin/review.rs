@@ -1,3 +1,4 @@
+use anyhow::Result;
 use cursive::style::{BorderStyle, Palette};
 use cursive::traits::*;
 use cursive::views::Button;
@@ -23,7 +24,7 @@ shadow!(build);
 static OCEAN: &str = "ocean";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let mut history = SQLiteHistory::default().await;
 
     match std::env::args().nth(1).as_deref() {
@@ -31,7 +32,15 @@ async fn main() {
             println!("used with goldendict-ng");
             println!("https://github.com/lengyijun/goldendict-ng-helper");
             println!("{}", build::VERSION); //print version const
-            return;
+            return Ok(());
+        }
+        Some("phrase") => {
+            let v = history.phrase().await?;
+            if v.is_empty() {
+                println!("no phrases to review");
+                return Ok(());
+            }
+            history.queue.extend(v);
         }
         Some("favourite") => {
             let favorite_words = extract_all_words_from_favorites().unwrap();
@@ -43,7 +52,7 @@ async fn main() {
             }
             if v.is_empty() {
                 println!("no words to review in favourite");
-                return;
+                return Ok(());
             }
             v.shuffle(&mut rng());
             history.queue.extend(v);
@@ -58,7 +67,7 @@ async fn main() {
             }
             if v.is_empty() {
                 println!("no words to review in folder {folder_name}");
-                return;
+                return Ok(());
             }
             v.shuffle(&mut rng());
             history.queue.extend(v);
@@ -68,7 +77,7 @@ async fn main() {
 
     let Ok(word) = history.next_to_review().await else {
         println!("no words to review");
-        return;
+        return Ok(());
     };
     let mut siv = Cursive::default();
     siv.set_user_data(history);
@@ -118,6 +127,7 @@ async fn main() {
     let history: SQLiteHistory = siv.take_user_data().unwrap();
     println!("{:?}", history.history);
     println!("{:?}", history.queue);
+    Ok(())
 }
 
 fn show_answer_cb(s: &mut Cursive) {

@@ -1,4 +1,7 @@
+#![feature(let_chains)]
+
 use anyhow::Result;
+use clap::Parser;
 use cursive::style::{BorderStyle, Palette};
 use cursive::traits::*;
 use cursive::views::Button;
@@ -23,56 +26,88 @@ shadow!(build);
 
 static OCEAN: &str = "ocean";
 
+#[derive(Parser)]
+struct Args {
+    category: Vec<String>,
+
+    #[arg(long, default_value_t = false)]
+    help: bool,
+
+    /// 10000: frequent word
+    /// 30000: word often meet
+    #[arg(long)]
+    frequency: Option<u32>,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut history = SQLiteHistory::default().await;
+    let args = Args::parse();
+    if args.help {
+        println!("used with goldendict-ng");
+        println!("https://github.com/lengyijun/goldendict-ng-reviewer");
+        println!("{}", build::VERSION); //print version const
+        return Ok(());
+    }
 
-    match std::env::args().nth(1).as_deref() {
-        Some("--help") => {
-            println!("used with goldendict-ng");
-            println!("https://github.com/lengyijun/goldendict-ng-helper");
-            println!("{}", build::VERSION); //print version const
+    let mut history = SQLiteHistory::default().await;
+    if let Some(frequency) = args.frequency {
+        if frequency > 50000 {
+            println!("Every word's freq <= 50000");
+            println!("Please give a smaller number");
             return Ok(());
         }
-        Some("phrase") => {
-            let v = history.phrase().await?;
-            if v.is_empty() {
-                println!("no phrases to review");
-                return Ok(());
-            }
-            history.queue.extend(v);
+
+        if frequency == 0 {
+            println!("Frequency should > 0");
+            println!("For example: 10000 30000");
+            return Ok(());
         }
-        Some("favourite") => {
-            let favorite_words = extract_all_words_from_favorites().unwrap();
-            let mut v = Vec::new();
-            for word in favorite_words.into_iter() {
-                if history.should_review(&word).await.is_ok() {
-                    v.push(word);
+
+        history.freq = frequency;
+        history.init_records()?;
+    }
+
+    for category in &args.category {
+        match &**category {
+            "phrase" => {
+                let v = history.phrase().await?;
+                if v.is_empty() {
+                    println!("no phrases to review");
+                    return Ok(());
                 }
+                history.queue.extend(v);
             }
-            if v.is_empty() {
-                println!("no words to review in favourite");
-                return Ok(());
-            }
-            v.shuffle(&mut rng());
-            history.queue.extend(v);
-        }
-        Some(folder_name) => {
-            let favorite_words = extract_words_from_favorites_folder(folder_name).unwrap();
-            let mut v = Vec::new();
-            for word in favorite_words.into_iter() {
-                if history.should_review(&word).await.is_ok() {
-                    v.push(word);
+            "favourite" => {
+                let favorite_words = extract_all_words_from_favorites().unwrap();
+                let mut v = Vec::new();
+                for word in favorite_words.into_iter() {
+                    if history.should_review(&word).await.is_ok() {
+                        v.push(word);
+                    }
                 }
+                if v.is_empty() {
+                    println!("no words to review in favourite");
+                    return Ok(());
+                }
+                v.shuffle(&mut rng());
+                history.queue.extend(v);
             }
-            if v.is_empty() {
-                println!("no words to review in folder {folder_name}");
-                return Ok(());
+            folder_name => {
+                let favorite_words = extract_words_from_favorites_folder(folder_name).unwrap();
+                let mut v = Vec::new();
+                for word in favorite_words.into_iter() {
+                    if history.should_review(&word).await.is_ok() {
+                        v.push(word);
+                    }
+                }
+                if v.is_empty() {
+                    println!("no words to review in folder {folder_name}");
+                    return Ok(());
+                }
+                v.shuffle(&mut rng());
+                history.queue.extend(v);
             }
-            v.shuffle(&mut rng());
-            history.queue.extend(v);
         }
-        None => {}
     }
 
     let Ok(word) = history.next_to_review().await else {

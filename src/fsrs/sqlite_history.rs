@@ -1,6 +1,7 @@
 //! <https://github.com/kkawakam/rustyline/blob/master/src/sqlite_history.rs>
 //! History impl. based on SQLite
 
+use crate::csv::Record;
 use crate::db_path;
 use anyhow::Context;
 use anyhow::Result;
@@ -35,6 +36,10 @@ pub struct SQLiteHistory {
     pub fsrs: FSRS,
     pub history: Vec<String>,
     pub queue: VecDeque<String>,
+    /// The loaded csv
+    /// Ordered
+    pub records: Vec<Record>,
+    pub freq: u32,
 }
 
 /*
@@ -67,6 +72,8 @@ impl SQLiteHistory {
             fsrs: FSRS::new(Parameters::default()),
             history: Vec::new(),
             queue: VecDeque::new(),
+            records: Vec::new(),
+            freq: 0,
         };
         sh.check_schema().await?;
         sh.create_session().await?;
@@ -196,25 +203,42 @@ COMMIT;
     }
 
     async fn next_to_review_db(&mut self) -> Result<String> {
-        let word: String = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
+        if self.freq == 0 {
+            self.next_to_review_db_inner().await
+        } else {
+            loop {
+                let word = self.next_to_review_db_inner().await?;
+                match self.binary_search(&word) {
+                    Some(record) => {
+                        if self.qualify(record) {
+                            return Ok(word);
+                        }
+                    }
+                    None => {}
+                }
+            }
+        }
+    }
+
+    async fn next_to_review_db_inner(&mut self) -> Result<String> {
+        let row = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
                 .bind(self.session_id)
                 .bind(self.row_id)
                 .fetch_one(&self.conn)
                 .await {
                     Ok(row) => {
-                        self.row_id = row.get(0);
-                        row.get(1)
+                        row
                     }
                     Err(_) => {
                         // search from start
-                        let row = sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 ORDER BY RANDOM() LIMIT 1;")
+                         sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 ORDER BY RANDOM() LIMIT 1;")
                             .bind(self.session_id)
                             .fetch_one(&self.conn)
-                            .await?;
-                        self.row_id = row.get(0);
-                        row.get(1)
+                            .await?
                     }
                 };
+        self.row_id = row.get(0);
+        let word: String = row.get(1);
         sqlx::query("UPDATE fsrs SET session_id = $2 WHERE word = $1")
             .bind(&word)
             .bind(self.session_id)

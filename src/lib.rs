@@ -1,3 +1,4 @@
+pub mod csv;
 pub mod favorite;
 pub mod fsrs;
 pub mod utils;
@@ -36,4 +37,8 @@ pub fn favourites_path() -> PathBuf {
         .unwrap()
         .join("goldendict")
         .join("favorites")
+}
+
+pub fn ecdict_path() -> PathBuf {
+    dictionary_dir().join("ecdict.csv")
 }

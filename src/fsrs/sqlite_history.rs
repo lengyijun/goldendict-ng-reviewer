@@ -22,7 +22,6 @@ use std::str::FromStr;
 use super::get_card;
 
 /// History stored in an SQLite database.
-#[derive(Clone)]
 pub struct SQLiteHistory {
     ignore_dups: bool,
     pub conn: SqlitePool, /* we need to keep a connection opened at least for in memory

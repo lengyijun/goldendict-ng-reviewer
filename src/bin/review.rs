@@ -71,6 +71,10 @@ async fn main() -> Result<()> {
         history.init_records()?;
     }
 
+    if args.word2vec {
+        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word)));
+    }
+
     for category in &args.category {
         match &**category {
             "phrase" => {

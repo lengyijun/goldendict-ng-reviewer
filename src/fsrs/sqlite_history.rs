@@ -17,7 +17,9 @@ use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::Row;
 use sqlx::Sqlite;
 use std::collections::VecDeque;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::str::FromStr;
 
 use super::get_card;
@@ -41,6 +43,12 @@ pub struct SQLiteHistory {
     /// Ordered
     pub records: Vec<Record>,
     pub freq: u32,
+
+    /// extend by `levenshtein` or `word2vec`
+    // pub extend_stradegy: fn(&str) -> (impl std::future::Future<Output = Result<()>> + Send),
+    pub extend_stradegy: Box<
+        dyn Fn(&mut SQLiteHistory, &str) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send,
+    >,
 }
 
 /*
@@ -75,6 +83,8 @@ impl SQLiteHistory {
             queue: VecDeque::new(),
             records: Vec::new(),
             freq: 0,
+            // extend_stradegy: Box::new(|sh, word| Box::pin(sh.leven(word))),
+            extend_stradegy: Box::new(|_sh, _word| Box::pin((async || Ok(()))())),
         };
         sh.check_schema().await?;
         sh.create_session().await?;

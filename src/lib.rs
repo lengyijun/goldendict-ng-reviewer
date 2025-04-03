@@ -2,6 +2,7 @@ pub mod csv;
 pub mod favorite;
 pub mod fsrs;
 pub mod utils;
+pub mod word2vec;
 
 use anyhow::Context;
 use std::fs::create_dir;

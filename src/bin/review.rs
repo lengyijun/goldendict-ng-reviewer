@@ -34,6 +34,9 @@ struct Args {
     #[arg(long, default_value_t = false)]
     help: bool,
 
+    #[arg(long, default_value_t = false)]
+    word2vec: bool,
+
     /// 10000: frequent word
     /// 30000: word often meet
     #[arg(long)]

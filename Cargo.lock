@@ -902,6 +902,7 @@ dependencies = [
  "tokio",
  "urlencoding",
  "walkdir",
+ "word2vec",
 ]
 
 [[package]]
@@ -2763,6 +2764,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3268f3d866458b787f390cf61f4bbb563b922d091359f9608842999eaee3943c"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "word2vec"
+version = "0.3.3"
+source = "git+https://github.com/lengyijun/word2vec?branch=main#93e138b951c73fb73ac8d5d645c18bf8deb61d92"
+dependencies = [
+ "byteorder",
 ]
 
 [[package]]

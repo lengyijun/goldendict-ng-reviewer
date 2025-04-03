@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
             }
         }
     } else {
-        match foo(&mut deck.conn).await {
+        match foo(&deck.conn).await {
             Some(x) => x,
             None => {
                 eprintln!("all reviewed");
@@ -92,6 +92,5 @@ async fn foo(conn: &SqlitePool) -> Option<String> {
             let x: String = sqlite_row.get(0);
             x
         })
-        .filter(|word| !existed_prefixes.contains(&word.chars().next().unwrap()))
-        .next()
+        .find(|word| !existed_prefixes.contains(&word.chars().next().unwrap()))
 }

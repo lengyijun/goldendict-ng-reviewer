@@ -191,7 +191,7 @@ COMMIT;
         let similar_words =
             sqlx::query("SELECT word FROM fsrs where word != $1 AND session_id != $2;")
                 .bind(word)
-                .bind(&self.session_id)
+                .bind(self.session_id)
                 .fetch_all(&self.conn)
                 .await?
                 .into_iter()
@@ -302,5 +302,5 @@ COMMIT;
 
 pub async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {
     let options = SqliteConnectOptions::from_str(path.to_str().unwrap())?.with_regexp();
-    Ok(SqlitePoolOptions::new().connect_with(options).await?)
+    SqlitePoolOptions::new().connect_with(options).await
 }

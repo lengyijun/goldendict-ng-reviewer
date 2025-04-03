@@ -25,8 +25,9 @@ use super::get_card;
 /// History stored in an SQLite database.
 pub struct SQLiteHistory {
     ignore_dups: bool,
-    pub conn: SqlitePool, /* we need to keep a connection opened at least for in memory
-                           * database and also for cached statement(s) */
+    /// we need to keep a connection opened at least for in memory
+    ///  database and also for cached statement(s)
+    pub conn: SqlitePool,
     /// used in anki mode: avoid re-review
     /// 0 means no new entry added
     pub session_id: i32,

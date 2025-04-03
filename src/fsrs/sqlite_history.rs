@@ -45,9 +45,11 @@ pub struct SQLiteHistory {
     pub freq: u32,
 
     /// extend by `levenshtein` or `word2vec`
-    // pub extend_stradegy: fn(&str) -> (impl std::future::Future<Output = Result<()>> + Send),
     pub extend_stradegy: Box<
-        dyn Fn(&mut SQLiteHistory, &str) -> Pin<Box<dyn Future<Output = Result<()>> + Send>> + Send,
+        dyn for<'a> Fn(
+            &'a mut SQLiteHistory,
+            &'a str,
+        ) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>>,
     >,
 }
 
@@ -83,8 +85,9 @@ impl SQLiteHistory {
             queue: VecDeque::new(),
             records: Vec::new(),
             freq: 0,
-            // extend_stradegy: Box::new(|sh, word| Box::pin(sh.leven(word))),
-            extend_stradegy: Box::new(|_sh, _word| Box::pin((async || Ok(()))())),
+            // By default: review words looks similar
+            extend_stradegy: Box::new(|sh, word| Box::pin(sh.leven(word))),
+            // extend_stradegy: Box::new(|_sh, _word| Box::pin((async || Ok(()))())),
         };
         sh.check_schema().await?;
         sh.create_session().await?;
@@ -270,7 +273,14 @@ COMMIT;
     pub async fn next_to_review(&mut self) -> Result<String> {
         let word = self.next_to_review_inner().await?;
         self.history.push(word.clone());
-        let _ = self.leven(&word).await;
+
+        let extend = std::mem::replace(
+            &mut self.extend_stradegy,
+            Box::new(|_, _| Box::pin(async { Ok(()) })),
+        );
+        let _ = extend(self, &word).await;
+        self.extend_stradegy = extend;
+
         Ok(word)
     }
 

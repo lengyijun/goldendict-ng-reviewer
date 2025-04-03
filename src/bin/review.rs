@@ -28,6 +28,10 @@ static OCEAN: &str = "ocean";
 
 #[derive(Parser)]
 struct Args {
+    /// First review word
+    #[arg(long)]
+    start: Option<String>,
+
     /// folder in ~/.config/goldendict/favorites
     category: Vec<String>,
 
@@ -118,10 +122,20 @@ async fn main() -> Result<()> {
         }
     }
 
-    let Ok(word) = history.next_to_review().await else {
-        println!("no words to review");
-        return Ok(());
+    let first_word = match args.start {
+        Some(word) => {
+            history.middle_history.push(word.clone());
+            word
+        }
+        None => match history.next_to_review().await {
+            Ok(word) => word,
+            Err(_) => {
+                println!("no words to review");
+                return Ok(());
+            }
+        },
     };
+
     let mut siv = Cursive::default();
     siv.set_user_data(history);
 
@@ -158,7 +172,7 @@ async fn main() -> Result<()> {
 
     siv.add_fullscreen_layer(
         Dialog::around(TextView::new(" ".repeat(200))) // move the title to center
-            .title(word)
+            .title(first_word)
             .content(show_answer_layout())
             .h_align(cursive::align::HAlign::Center)
             .with_name(OCEAN),

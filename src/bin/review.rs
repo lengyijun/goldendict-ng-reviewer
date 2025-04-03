@@ -168,7 +168,8 @@ async fn main() -> Result<()> {
     siv.run();
 
     let history: SQLiteHistory = siv.take_user_data().unwrap();
-    println!("{:?}", history.history);
+    println!("{:?}", history.bottom_history);
+    println!("{:?}", history.middle_history);
     println!("{:?}", history.queue);
     Ok(())
 }

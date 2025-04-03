@@ -37,7 +37,8 @@ pub struct SQLiteHistory {
     /// search next word to review from `row_id`
     pub row_id: i32,
     pub fsrs: FSRS,
-    pub history: Vec<String>,
+    pub bottom_history: Vec<String>,
+    pub middle_history: Vec<String>,
     pub queue: VecDeque<String>,
     /// The loaded csv
     /// Ordered
@@ -81,7 +82,8 @@ impl SQLiteHistory {
             session_id: 0,
             row_id: -1,
             fsrs: FSRS::new(Parameters::default()),
-            history: Vec::new(),
+            bottom_history: Vec::new(),
+            middle_history: Vec::new(),
             queue: VecDeque::new(),
             records: Vec::new(),
             freq: 0,
@@ -263,24 +265,34 @@ COMMIT;
 
     async fn next_to_review_inner(&mut self) -> Result<String> {
         while let Some(word) = self.queue.pop_front() {
-            if !self.history.contains(&word) {
+            if !self.bottom_history.contains(&word) || !self.middle_history.contains(&word) {
                 return Ok(word);
             }
         }
+
+        while let Some(word) = self.middle_history.pop() {
+            let extend = std::mem::replace(
+                &mut self.extend_stradegy,
+                Box::new(|_, _| Box::pin(async { Ok(()) })),
+            );
+            let _ = extend(self, &word).await;
+            self.extend_stradegy = extend;
+
+            self.bottom_history.push(word);
+
+            while let Some(word) = self.queue.pop_front() {
+                if !self.bottom_history.contains(&word) || !self.middle_history.contains(&word) {
+                    return Ok(word);
+                }
+            }
+        }
+
         self.next_to_review_db().await
     }
 
     pub async fn next_to_review(&mut self) -> Result<String> {
         let word = self.next_to_review_inner().await?;
-        self.history.push(word.clone());
-
-        let extend = std::mem::replace(
-            &mut self.extend_stradegy,
-            Box::new(|_, _| Box::pin(async { Ok(()) })),
-        );
-        let _ = extend(self, &word).await;
-        self.extend_stradegy = extend;
-
+        self.middle_history.push(word.clone());
         Ok(word)
     }
 

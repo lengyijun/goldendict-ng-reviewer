@@ -7,8 +7,8 @@ use anyhow::Context;
 use std::fs::create_dir;
 use std::path::PathBuf;
 
+/// ~/.local/share/goldendict
 pub fn dictionary_dir() -> PathBuf {
-    // ~/.local/share/goldendict
     let path = dirs::data_local_dir().unwrap().join("goldendict");
     if !path.exists() {
         create_dir(&path)

@@ -28,6 +28,7 @@ static OCEAN: &str = "ocean";
 
 #[derive(Parser)]
 struct Args {
+    /// folder in ~/.config/goldendict/favorites
     category: Vec<String>,
 
     #[arg(long, default_value_t = false)]

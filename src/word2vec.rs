@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::env;
 use std::sync::LazyLock;
@@ -19,17 +20,18 @@ impl SQLiteHistory {
     async fn rank_similar_words(&self, word: &str) -> Result<Vec<(f32, String)>> {
         let word = MODEL.get_vector(word).unwrap();
 
-        let mut v = Vec::new();
+        let mut v: Vec<(f32, String)> = self
+            .all_words_need_review()
+            .await?
+            .into_par_iter()
+            .flat_map(|x| {
+                MODEL
+                    .get_vector(&x)
+                    .map(|arr1| (word2vec::utils::dot_product(arr1, word), x))
+            })
+            .filter(|(dot_product, _)| *dot_product > THREHOLD)
+            .collect();
 
-        for x in self.all_words_need_review().await? {
-            let Some(arr1) = MODEL.get_vector(&x) else {
-                continue;
-            };
-            let product = word2vec::utils::dot_product(arr1, word);
-            if product > THREHOLD {
-                v.push((product, x));
-            }
-        }
         v.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(Ordering::Equal));
         Ok(v)
     }

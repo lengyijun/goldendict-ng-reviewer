@@ -18,7 +18,7 @@ use sqlx::Row;
 use sqlx::Sqlite;
 use std::collections::VecDeque;
 use std::future::Future;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::str::FromStr;
 
@@ -71,10 +71,11 @@ impl SQLiteHistory {
     }
 
     async fn new(path: PathBuf) -> Result<Self> {
-        if !Sqlite::database_exists(path.to_str().unwrap()).await? {
-            Sqlite::create_database(path.to_str().unwrap()).await?;
+        let path = path.to_str().unwrap();
+        if !Sqlite::database_exists(path).await? {
+            Sqlite::create_database(path).await?;
         }
-        let conn = conn(&path).await?;
+        let conn = conn(path).await?;
         let mut sh = Self {
             // not strictly consecutive...
             ignore_dups: true,
@@ -344,7 +345,7 @@ COMMIT;
     }
 }
 
-pub async fn conn(path: &Path) -> sqlx::Result<SqlitePool> {
-    let options = SqliteConnectOptions::from_str(path.to_str().unwrap())?.with_regexp();
+pub async fn conn(path: &str) -> sqlx::Result<SqlitePool> {
+    let options = SqliteConnectOptions::from_str(path)?.with_regexp();
     SqlitePoolOptions::new().connect_with(options).await
 }

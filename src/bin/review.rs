@@ -41,6 +41,9 @@ struct Args {
     #[arg(long, default_value_t = false)]
     word2vec: bool,
 
+    #[arg(long, default_value_t = false, conflicts_with = "word2vec")]
+    merriam: bool,
+
     /// 10000: frequent word
     /// 30000: word often meet
     #[arg(long)]
@@ -77,6 +80,8 @@ async fn main() -> Result<()> {
 
     if args.word2vec {
         history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word)));
+    } else if args.merriam {
+        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_merriam(word)));
     }
 
     for category in &args.category {

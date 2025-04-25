@@ -1,6 +1,7 @@
 pub mod csv;
 pub mod favorite;
 pub mod fsrs;
+pub mod merriam;
 pub mod utils;
 pub mod word2vec;
 

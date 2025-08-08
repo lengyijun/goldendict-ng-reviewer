@@ -3,6 +3,7 @@
 
 use crate::csv::Record;
 use crate::db_path;
+use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
 use chrono::Utc;
@@ -23,6 +24,38 @@ use std::pin::Pin;
 use std::str::FromStr;
 
 use super::get_card;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExtendStradegy {
+    /// Default
+    Levenshtein,
+    Word2vec,
+    Merriam,
+    /// 在 sqlite 中随机选择下一个
+    Random,
+    /// Used in only review a folder
+    NoExtend,
+}
+
+impl ExtendStradegy {
+    fn get_fn(
+        self,
+    ) -> Box<
+        dyn for<'a> Fn(
+            &'a mut SQLiteHistory,
+            &'a str,
+        ) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>>,
+    > {
+        match self {
+            ExtendStradegy::Levenshtein => Box::new(|sh, word| Box::pin(sh.leven(word))),
+            ExtendStradegy::Word2vec => Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word))),
+            ExtendStradegy::Merriam => Box::new(|sh, word| Box::pin(sh.extend_by_merriam(word))),
+            ExtendStradegy::NoExtend | ExtendStradegy::Random => {
+                Box::new(|_, _| Box::pin(async { Ok(()) }))
+            }
+        }
+    }
+}
 
 /// History stored in an SQLite database.
 pub struct SQLiteHistory {
@@ -46,12 +79,7 @@ pub struct SQLiteHistory {
     pub freq: u32,
 
     /// extend by `levenshtein` or `word2vec`
-    pub extend_stradegy: Box<
-        dyn for<'a> Fn(
-            &'a mut SQLiteHistory,
-            &'a str,
-        ) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>>,
-    >,
+    pub extend_stradegy: ExtendStradegy,
 }
 
 /*
@@ -89,7 +117,7 @@ impl SQLiteHistory {
             records: Vec::new(),
             freq: 0,
             // By default: review words looks similar
-            extend_stradegy: Box::new(|sh, word| Box::pin(sh.leven(word))),
+            extend_stradegy: ExtendStradegy::Levenshtein,
             // extend_stradegy: Box::new(|_sh, _word| Box::pin((async || Ok(()))())),
         };
         sh.check_schema().await?;
@@ -272,12 +300,8 @@ COMMIT;
         }
 
         while let Some(word) = self.middle_history.pop() {
-            let extend = std::mem::replace(
-                &mut self.extend_stradegy,
-                Box::new(|_, _| Box::pin(async { Ok(()) })),
-            );
+            let extend = self.extend_stradegy.get_fn();
             let _ = extend(self, &word).await;
-            self.extend_stradegy = extend;
 
             self.bottom_history.push(word);
 
@@ -288,7 +312,11 @@ COMMIT;
             }
         }
 
-        self.next_to_review_db().await
+        if self.extend_stradegy == ExtendStradegy::NoExtend {
+            Err(anyhow!("No more words to review"))
+        } else {
+            self.next_to_review_db().await
+        }
     }
 
     pub async fn next_to_review(&mut self) -> Result<String> {

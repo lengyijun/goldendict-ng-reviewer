@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 use anyhow::Result;
 use clap::Parser;
 use cursive::style::{BorderStyle, Palette};
@@ -14,7 +12,7 @@ use futures::executor::block_on;
 use goldendict_ng_helper::favorite::{
     extract_all_words_from_favorites, extract_words_from_favorites_folder,
 };
-use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
+use goldendict_ng_helper::fsrs::sqlite_history::{ExtendStradegy, SQLiteHistory};
 use rand::prelude::SliceRandom;
 use rand::rng;
 use rs_fsrs::Rating;
@@ -43,6 +41,12 @@ struct Args {
 
     #[arg(long, default_value_t = false, conflicts_with = "word2vec")]
     merriam: bool,
+
+    #[arg(long, default_value_t = false, conflicts_with_all = ["word2vec", "merriam"])]
+    no_extend: bool,
+
+    #[arg(long, default_value_t = false, conflicts_with_all = ["word2vec", "merriam", "no-extend"])]
+    random: bool,
 
     /// 10000: frequent word
     /// 30000: word often meet
@@ -79,9 +83,13 @@ async fn main() -> Result<()> {
     }
 
     if args.word2vec {
-        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word)));
+        history.extend_stradegy = ExtendStradegy::Word2vec;
     } else if args.merriam {
-        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_merriam(word)));
+        history.extend_stradegy = ExtendStradegy::Merriam;
+    } else if args.no_extend {
+        history.extend_stradegy = ExtendStradegy::NoExtend;
+    } else if args.random {
+        history.extend_stradegy = ExtendStradegy::Random;
     }
 
     for category in &args.category {

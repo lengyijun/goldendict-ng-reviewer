@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 use anyhow::Result;
 use clap::Parser;
 use cursive::style::{BorderStyle, Palette};
@@ -44,6 +42,9 @@ struct Args {
     #[arg(long, default_value_t = false, conflicts_with = "word2vec")]
     merriam: bool,
 
+    #[arg(long, default_value_t = false, conflicts_with_all = ["word2vec", "merriam"])]
+    no_extend: bool,
+
     /// 10000: frequent word
     /// 30000: word often meet
     #[arg(long)]
@@ -82,6 +83,8 @@ async fn main() -> Result<()> {
         history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word)));
     } else if args.merriam {
         history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_merriam(word)));
+    } else if args.no_extend {
+        history.extend_stradegy = Box::new(|_, _| Box::pin(async { Ok(()) }));
     }
 
     for category in &args.category {

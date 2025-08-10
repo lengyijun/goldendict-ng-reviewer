@@ -12,7 +12,7 @@ use futures::executor::block_on;
 use goldendict_ng_helper::favorite::{
     extract_all_words_from_favorites, extract_words_from_favorites_folder,
 };
-use goldendict_ng_helper::fsrs::sqlite_history::SQLiteHistory;
+use goldendict_ng_helper::fsrs::sqlite_history::{ExtendStradegy, SQLiteHistory};
 use rand::prelude::SliceRandom;
 use rand::rng;
 use rs_fsrs::Rating;
@@ -80,11 +80,11 @@ async fn main() -> Result<()> {
     }
 
     if args.word2vec {
-        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_word2vec(word)));
+        history.extend_stradegy = ExtendStradegy::Word2vec;
     } else if args.merriam {
-        history.extend_stradegy = Box::new(|sh, word| Box::pin(sh.extend_by_merriam(word)));
+        history.extend_stradegy = ExtendStradegy::Merriam;
     } else if args.no_extend {
-        history.extend_stradegy = Box::new(|_, _| Box::pin(async { Ok(()) }));
+        history.extend_stradegy = ExtendStradegy::NoExtend;
     }
 
     for category in &args.category {

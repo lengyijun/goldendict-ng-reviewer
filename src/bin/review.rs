@@ -48,6 +48,13 @@ struct Args {
     #[arg(long, default_value_t = false, conflicts_with_all = ["word2vec", "merriam", "no-extend"])]
     random: bool,
 
+    /// only review last N rows (recently updated rows)
+    /// Make no sense if `!category.is_empty()`
+    /// 0: unspecified
+    /// use 1000, 10000
+    #[arg(long, default_value_t = 0)]
+    last_n_row: usize,
+
     /// 10000: frequent word
     /// 30000: word often meet
     #[arg(long)]
@@ -133,6 +140,13 @@ async fn main() -> Result<()> {
                 history.queue.extend(v);
             }
         }
+    }
+
+    if !args.category.is_empty() && args.last_n_row != 0 {
+        history.last_n_row = 0;
+        eprintln!("`--recent` is ignored when `category` is specified");
+    } else {
+        history.last_n_row = args.last_n_row;
     }
 
     let first_word = match args.start {

@@ -78,6 +78,12 @@ pub struct SQLiteHistory {
     pub records: Vec<Record>,
     pub freq: u32,
 
+    /// only review last N rows (recently updated rows)
+    /// Make no sense if `!category.is_empty()`
+    /// 0: unspecified
+    /// use 1000, 10000
+    pub last_n_row: usize,
+
     /// extend by `levenshtein` or `word2vec`
     pub extend_stradegy: ExtendStradegy,
 }
@@ -116,6 +122,7 @@ impl SQLiteHistory {
             queue: VecDeque::new(),
             records: Vec::new(),
             freq: 0,
+            last_n_row: 0,
             // By default: review words looks similar
             extend_stradegy: ExtendStradegy::Levenshtein,
             // extend_stradegy: Box::new(|_sh, _word| Box::pin((async || Ok(()))())),
@@ -266,7 +273,8 @@ COMMIT;
     }
 
     async fn next_to_review_db_inner(&mut self) -> Result<String> {
-        let row = match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
+        let row = if self.last_n_row == 0 {
+            match sqlx::query("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 ORDER BY RANDOM() LIMIT 1;")
                 .bind(self.session_id)
                 .bind(self.row_id)
                 .fetch_one(&self.conn)
@@ -281,7 +289,25 @@ COMMIT;
                             .fetch_one(&self.conn)
                             .await?
                     }
-                };
+                }
+        } else {
+            match sqlx::query(&format!("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > $2 AND rowid > (SELECT MAX(rowid) - {} FROM fsrs) ORDER BY RANDOM() LIMIT 1;", self.last_n_row))
+                .bind(self.session_id)
+                .bind(self.row_id)
+                .fetch_one(&self.conn)
+                .await {
+                    Ok(row) => {
+                        row
+                    }
+                    Err(_) => {
+                        // search from start
+                         sqlx::query(&format!("SELECT rowid, word FROM fsrs WHERE timediff('now', substr(due, 2, length(due) - 2)) LIKE '+%' AND session_id < $1 AND rowid > (SELECT MAX(rowid) - {} FROM fsrs) ORDER BY RANDOM() LIMIT 1;", self.last_n_row))
+                            .bind(self.session_id)
+                            .fetch_one(&self.conn)
+                            .await?
+                    }
+                }
+        };
         self.row_id = row.get(0);
         let word: String = row.get(1);
         sqlx::query("UPDATE fsrs SET session_id = $2 WHERE word = $1")
